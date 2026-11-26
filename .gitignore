@@ -1,0 +1,42 @@
+# Dependencies & Compiled Output
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Environment & Secrets (NEVER commit real credentials)
+.env
+.env.*
+!.env.example
+
+# Local n8n Docker volume & local workflow dumps
+n8n_data/
+workflows-local/
+
+# User instruction documents (only keep empty placeholder)
+user-docs/*
+!user-docs/.gitkeep
+
+# Generated Harness Configurations (contain machine-local paths & active session state)
+.mcp.json
+.vscode/mcp.json
+.codex/
+.agents/plugins/
+.agents/skills/*
+!.agents/skills/init
+.claude/skills/*
+!.claude/skills/init
+.claude/commands/*
+!.claude/commands/init.md
+.claude/settings.local.json
+CLAUDE.md
+CLAUDE.local.md
+AGENTS.md
+GEMINI.md
+.github/copilot-instructions.md
+.github/prompts/*
+!.github/prompts/init.prompt.md
+
+# OS & Logs
+.DS_Store
+Thumbs.db
+*.log

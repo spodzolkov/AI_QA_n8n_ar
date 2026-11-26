@@ -1,0 +1,34 @@
+{
+  "name": "n8n-multi-harness-architect",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Multi-harness MCP infrastructure & interactive n8n workflow architect for Google Antigravity, OpenAI Codex, Claude Code, and VS Code Copilot",
+  "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "build": "tsc",
+    "init": "tsx src/cli/init.ts",
+    "parse-doc": "tsx src/cli/parse-doc.ts",
+    "check:clean": "tsx src/cli/sanitize-check.ts",
+    "clean:user-data": "tsx src/cli/clean-user-data.ts",
+    "github:publish": "tsx src/cli/github-publish.ts",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@inquirer/prompts": "^7.2.0",
+    "@modelcontextprotocol/sdk": "^1.10.0",
+    "dotenv": "^16.4.7",
+    "mammoth": "^1.8.0",
+    "n8n-mcp": "latest",
+    "word-extractor": "^1.0.4",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^3.0.5"
+  }
+}
