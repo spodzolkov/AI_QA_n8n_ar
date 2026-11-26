@@ -14,7 +14,9 @@ export interface N8nHealthCheckResult {
   ok: boolean;
   status?: number;
   baseUrl: string;
+  n8nVersion?: string | null;
   workflowCountSample?: number;
+  observedNodeTypeVersions?: Record<string, number>;
   message: string;
 }
 
@@ -108,7 +110,7 @@ export async function checkN8nConnection(
     };
   }
 
-  const endpoint = `${baseUrl}/api/v1/workflows?limit=1`;
+  const endpoint = `${baseUrl}/api/v1/workflows?limit=5`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -136,15 +138,47 @@ export async function checkN8nConnection(
       };
     }
 
-    const json = (await response.json()) as { data?: unknown[] };
-    const sampleCount = Array.isArray(json?.data) ? json.data.length : 0;
+    const json = (await response.json()) as {
+      data?: Array<{ nodes?: Array<{ type?: string; typeVersion?: number }> }>;
+    };
+    const workflows = Array.isArray(json?.data) ? json.data : [];
+    const sampleCount = workflows.length;
+
+    const observedNodeTypeVersions: Record<string, number> = {};
+    for (const wf of workflows) {
+      for (const n of wf.nodes ?? []) {
+        if (n.type && typeof n.typeVersion === "number") {
+          const prev = observedNodeTypeVersions[n.type];
+          if (prev === undefined || n.typeVersion > prev) {
+            observedNodeTypeVersions[n.type] = n.typeVersion;
+          }
+        }
+      }
+    }
+
+    let n8nVersion: string | null = null;
+    try {
+      const settingsRes = await fetch(`${baseUrl}/rest/settings`, {
+        method: "GET",
+        headers: { Accept: "application/json" },
+        signal: controller.signal,
+      });
+      if (settingsRes.ok) {
+        const settingsJson = (await settingsRes.json()) as { data?: { versionCli?: string } };
+        n8nVersion = settingsJson?.data?.versionCli ?? null;
+      }
+    } catch {
+      // Опціональна перевірка версії інстансу
+    }
 
     return {
       ok: true,
       status: response.status,
       baseUrl,
+      n8nVersion,
       workflowCountSample: sampleCount,
-      message: `З'єднання з n8n (${baseUrl}) успішне! Public REST API активний.`,
+      observedNodeTypeVersions,
+      message: `З'єднання з n8n (${baseUrl}${n8nVersion ? `, v${n8nVersion}` : ""}) успішне! Public REST API активний.`,
     };
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : String(error);

@@ -100,7 +100,17 @@ function startLauncher(): void {
     childEnv.N8N_API_KEY = envCfg.n8nApiKey;
   }
 
-  const child = spawn(process.execPath, [resolved.entryPath, ...process.argv.slice(2)], {
+  // Додаємо підвищений ліміт купи V8 (--max-old-space-size=4096), щоб запобігти нативному падінню
+  // SQLite-аддона в Node.js 22/24 (RemoveEnvironmentCleanupHook / Assertion failed: env != nullptr)
+  // під час збирання сміття при валідації великих воркфлоу.
+  const nodeArgs = [
+    "--max-old-space-size=4096",
+    "--initial-old-space-size=512",
+    resolved.entryPath,
+    ...process.argv.slice(2),
+  ];
+
+  const child = spawn(process.execPath, nodeArgs, {
     cwd: resolved.pkgDir,
     stdio: "inherit",
     env: childEnv,

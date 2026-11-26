@@ -105,8 +105,10 @@ server.tool(
             {
               ok: result.ok,
               baseUrl: result.baseUrl || "(не налаштовано)",
+              n8nVersion: result.n8nVersion ?? null,
               hasEnvFile: env.hasEnvFile,
               status: result.status ?? null,
+              observedNodeTypeVersions: result.observedNodeTypeVersions ?? {},
               message: result.message,
             },
             null,

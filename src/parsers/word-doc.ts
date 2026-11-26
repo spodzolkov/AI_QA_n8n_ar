@@ -1,16 +1,28 @@
+import fs from "node:fs";
 import path from "node:path";
 import mammoth from "mammoth";
 import WordExtractor from "word-extractor";
+import { extractTextPreservingOoxmlMath } from "./ooxml-math.js";
 
 /**
  * Зчитує документи Microsoft Word (.docx та legacy .doc).
- * Для .docx використовує mammoth (конвертація у структурований Markdown зі збереженням списків/таблиць)
- * з фолбеком на word-extractor. Для .doc використовує word-extractor.
+ * Для .docx спочатку перевіряє наявність OOXML-формул (<m:oMath>), щоб не втратити вирази n8n із символами $,
+ * далі використовує mammoth (конвертація у структурований Markdown) з фолбеком на word-extractor.
  */
 export async function parseWordDocument(filePath: string): Promise<string> {
   const ext = path.extname(filePath).toLowerCase();
 
   if (ext === ".docx") {
+    try {
+      const zipBuf = fs.readFileSync(filePath);
+      const mathPreservedText = extractTextPreservingOoxmlMath(zipBuf);
+      if (mathPreservedText && mathPreservedText.length > 0) {
+        return mathPreservedText;
+      }
+    } catch {
+      // Переходимо до стандартного парсингу через mammoth
+    }
+
     try {
       // mammoth має convertToMarkdown у рантаймі (навіть якщо частина типів декларує лише convertToHtml/extractRawText)
       const mammothAny = mammoth as unknown as {

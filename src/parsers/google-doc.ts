@@ -1,7 +1,10 @@
+import { extractTextPreservingOoxmlMath } from "./ooxml-math.js";
+
 export interface GoogleDocIdentifier {
   documentId: string;
   exportMarkdownUrl: string;
   exportTextUrl: string;
+  exportDocxUrl: string;
 }
 
 /**
@@ -35,6 +38,7 @@ export function extractGoogleDocId(url: string): GoogleDocIdentifier | null {
     documentId,
     exportMarkdownUrl: `https://docs.google.com/document/d/${documentId}/export?format=md`,
     exportTextUrl: `https://docs.google.com/document/d/${documentId}/export?format=txt`,
+    exportDocxUrl: `https://docs.google.com/document/d/${documentId}/export?format=docx`,
   };
 }
 
@@ -104,6 +108,31 @@ export async function fetchPublicGoogleDoc(url: string, timeoutMs = 12000): Prom
       }
 
       if (body.length > 0) {
+        // Якщо експорт містить сліди "з'їдених" формул Google Docs типу (('Node').first() без $,
+        // пробуємо підвантажити .docx-експорт і відновити блоки <m:oMath>.
+        if (/\(\(['"][^'"]+['"]\)\.(?:first|all|item)\b/.test(body)) {
+          try {
+            const docxRes = await fetch(info.exportDocxUrl, {
+              method: "GET",
+              redirect: "follow",
+              headers: { "User-Agent": "n8n-multi-harness-doc-ingest/1.0" },
+            });
+            if (docxRes.ok) {
+              const docxBuf = Buffer.from(await docxRes.arrayBuffer());
+              const mathRestored = extractTextPreservingOoxmlMath(docxBuf);
+              if (mathRestored && mathRestored.length > 0) {
+                return {
+                  documentId: info.documentId,
+                  format: "text",
+                  content: mathRestored,
+                };
+              }
+            }
+          } catch {
+            // Залишаємо основний прочитаний вміст
+          }
+        }
+
         return {
           documentId: info.documentId,
           format: candidate.format,

@@ -169,4 +169,46 @@ describe("Парсери документів та нормалізація URL"
     expect(docxParsed.sourceType).toBe("docx");
     expect(docxParsed.content).toContain("Telegram Bot");
   });
+
+  it("відновлює вирази n8n із символами $, перетворені Google Docs / Word на OOXML-формули <m:oMath>", async () => {
+    const mathDocxBuf = buildMinimalZip([
+      {
+        name: "[Content_Types].xml",
+        content:
+          `<?xml version="1.0" encoding="UTF-8"?>` +
+          `<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">` +
+          `<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>` +
+          `<Default Extension="xml" ContentType="application/xml"/>` +
+          `<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>` +
+          `</Types>`,
+      },
+      {
+        name: "_rels/.rels",
+        content:
+          `<?xml version="1.0" encoding="UTF-8"?>` +
+          `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">` +
+          `<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>` +
+          `</Relationships>`,
+      },
+      {
+        name: "word/document.xml",
+        content:
+          `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+          `<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math">` +
+          `<w:body><w:p>` +
+          `<w:r><w:t>{{ new Set((</w:t></w:r>` +
+          `<m:oMath><m:r><m:t>('Glossary List').first().json.terms); (</m:t></m:r></m:oMath>` +
+          `<w:r><w:t>('Пакет').first().json.items) }}</w:t></w:r>` +
+          `</w:p></w:body></w:document>`,
+      },
+    ]);
+
+    const mathDocxPath = path.join(tmpDir, "math-expr.docx");
+    fs.writeFileSync(mathDocxPath, mathDocxBuf);
+
+    const parsed = await readInstructionDocument(mathDocxPath);
+    expect(parsed.sourceType).toBe("docx");
+    expect(parsed.content).toContain("$('Glossary List').first().json.terms");
+    expect(parsed.content).toContain("$('Пакет').first().json.items");
+  });
 });
